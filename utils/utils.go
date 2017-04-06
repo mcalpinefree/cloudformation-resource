@@ -51,6 +51,14 @@ type Input struct {
 	Version struct {
 		LastUpdatedTime string `json:"LastUpdatedTime"`
 	} `json:"version"`
+	Params struct {
+		Template string `json:"template"`
+		Parameters string `json:"parameters"`
+		Tags string `json:"tags"`
+		Capabilities []string  `json:"capabilities"`
+		Delete bool `json:"delete"`
+		Wait bool `json:"wait"`
+	} `json:"params"`
 }
 
 func GetInput() Input {
@@ -68,6 +76,10 @@ func GetInput() Input {
 
 type AwsCloudformationSvc interface {
 	DescribeStacksRequest(input *cloudformation.DescribeStacksInput) (req *request.Request, output *cloudformation.DescribeStacksOutput)
+	CreateStackRequest(input *cloudformation.CreateStackInput) (req *request.Request, output *cloudformation.CreateStackOutput)
+	UpdateStackRequest(input *cloudformation.UpdateStackInput) (req *request.Request, output *cloudformation.UpdateStackOutput)
+	DescribeStackEventsRequest(input *cloudformation.DescribeStackEventsInput) (req *request.Request, output *cloudformation.DescribeStackEventsOutput)
+	DeleteStackRequest(input *cloudformation.DeleteStackInput) (req *request.Request, output *cloudformation.DeleteStackOutput)
 }
 
 func GetCloudformationService(input Input) AwsCloudformationSvc {
