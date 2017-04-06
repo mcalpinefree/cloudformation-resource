@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/ci-pipeline/cloudformation-resource/utils"
 )
 
 type MockRequest struct {
@@ -24,9 +25,9 @@ func TestHandleRequestNoError(t *testing.T) {
 		return nil
 	}
 
-	requestHandler := &AwsRequestHandler{}
+	requestHandler := &utils.AwsRequestHandler{}
 
-	err := requestHandler.handleRequest(&req)
+	err := requestHandler.HandleRequest(&req)
 
 	if err != nil {
 		t.Error("handleRequest returned an error when req.Send() returned nil")
@@ -43,9 +44,9 @@ func TestHandleRequestRequestFailure(t *testing.T) {
 		return requestFailure
 	}
 
-	requestHandler := &AwsRequestHandler{}
+	requestHandler := &utils.AwsRequestHandler{}
 
-	err := requestHandler.handleRequest(&req)
+	err := requestHandler.HandleRequest(&req)
 
 	if err == nil {
 		t.Error("handleRequest returned nil when req.Send() returned an error")
@@ -70,9 +71,9 @@ func TestHandleRequestRequestLimitExceeded(t *testing.T) {
 		return nil
 	}
 
-	requestHandler := &AwsRequestHandler{}
+	requestHandler := &utils.AwsRequestHandler{}
 
-	err := requestHandler.handleRequest(&req)
+	err := requestHandler.HandleRequest(&req)
 
 	if err != nil {
 		t.Errorf("handleRequest returned nil when req.Send() returned RequestLimitExceeded then nil. %v", err)
@@ -92,12 +93,12 @@ type MockRequestHandler struct {
 	Response error
 }
 
-func (r *MockRequestHandler) handleRequest(req AwsRequest) error {
+func (r *MockRequestHandler) HandleRequest(req utils.AwsRequest) error {
 	return r.Response
 }
 
 func TestGetVersionsNoStack(t *testing.T) {
-	input := Input{}
+	input := utils.Input{}
 
 	svc := &MockCloudformationSvc{}
 	requestHandler := &MockRequestHandler{Response: errors.New("Stack does not exist")}
@@ -110,7 +111,7 @@ func TestGetVersionsNoStack(t *testing.T) {
 }
 
 func TestGetVersionsNoPrevious(t *testing.T) {
-	input := Input{}
+	input := utils.Input{}
 
 	stacks := []*cloudformation.Stack{&cloudformation.Stack{}}
 	svc := &MockCloudformationSvc{Response: &cloudformation.DescribeStacksOutput{Stacks: stacks}}
@@ -128,7 +129,7 @@ func TestGetVersionsNoPrevious(t *testing.T) {
 }
 
 func TestGetVersionsWithPreviousTheSame(t *testing.T) {
-	input := Input{}
+	input := utils.Input{}
 
 	now := time.Now()
 	input.Version.LastUpdatedTime = now.String()
@@ -148,7 +149,7 @@ func TestGetVersionsWithPreviousTheSame(t *testing.T) {
 }
 
 func TestGetVersionsWithPreviousDifferent(t *testing.T) {
-	input := Input{}
+	input := utils.Input{}
 	input.Version.LastUpdatedTime = time.Now().String()
 	time.Sleep(5 * time.Millisecond)
 
