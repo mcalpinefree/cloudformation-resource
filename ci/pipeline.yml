@@ -1,0 +1,22 @@
+---
+resources:
+  - name: cloudformation-resource
+    type: git
+    source:
+      uri: https://github.com/ci-pipeline/cloudformation-resource.git
+      branch: master
+  - name: cloudformation-resource-image
+    type: docker-image
+    source:
+      repository: pipelineci/cloudformation-resource
+      username: {{dockerhub-username}}
+      password: {{dockerhub-password}}
+
+jobs:
+  - name: cloudformation-resource-build
+    plan:
+      - get: cloudformation-resource
+        trigger: true
+      - put: cloudformation-resource-image
+        params:
+          build: cloudformation-resource
