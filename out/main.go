@@ -21,7 +21,9 @@ func main() {
 	utils.Logln(cwd)
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
-	metadata, success := out(input, svc)
+	outMetadata, success := out(input, svc)
+	metadata := make([]interface{}, 1)
+	metadata[1] = outMetadata
 	result := utils.Result{Metadata: metadata}
 	output, _ := json.Marshal(result)
 	fmt.Printf("%s", string(output))

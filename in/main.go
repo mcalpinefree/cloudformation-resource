@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	result := utils.Result{Metadata: []string{}}
+	metadata := make([]interface{}, 0)
+	result := utils.Result{Metadata: metadata}
 	output, _ := json.Marshal(result)
 	fmt.Println(string(output))
 }

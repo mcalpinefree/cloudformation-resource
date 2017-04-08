@@ -15,7 +15,7 @@ import (
 )
 
 type Result struct {
-	Metadata interface{} `json:"metadata"`
+	Metadata []interface{} `json:"metadata"`
 	Version interface{} `json:"version"`
 }
 
