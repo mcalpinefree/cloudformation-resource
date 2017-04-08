@@ -65,7 +65,12 @@ func waitForStack(reqHandler utils.RequestHandler, svc utils.AwsCloudformationSv
 		req, resp := svc.DescribeStackEventsRequest(params)
 		err := reqHandler.HandleRequest(req)
 		if err != nil {
-			success = input.Params.Delete
+			if input.Params.Delete {
+				success = true
+				utils.Logln("Stack deleted")
+				return
+			}
+			utils.Logf("An error occured: %v\n", err)
 			return
 		}
 		stackEvents = resp.StackEvents
