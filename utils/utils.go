@@ -105,8 +105,8 @@ func GoToBuildDirectory() {
 	os.Chdir("/tmp/build/" + files[0].Name())
 }
 
-func Logln(message ...interface{}) {
-	Logf("%s\n", message...)
+func Logln(a ...interface{}) {
+	fmt.Fprintln(os.Stderr, a...)
 }
 
 func Logf(format string, a ...interface{}) {
