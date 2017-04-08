@@ -15,9 +15,4 @@ outputs:
 
 run:
   path: bash
-  args:
-    - -c
-    - |
-      ls -lah
-      ls -lahR cloudformation-resource
-      cloudformation-resource/ci/scripts/build.sh check
+  args: ["cloudformation-resource/ci/scripts/build.sh", "check"]
