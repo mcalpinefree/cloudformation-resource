@@ -36,6 +36,7 @@ func (r *AwsRequestHandler) HandleRequest(req AwsRequest) error {
 				s = s * 2
 				continue
 			}
+			Logln("HandleRequest error code:", reqerr.Code())
 		}
 		return err
 	}
@@ -98,7 +99,7 @@ func GoToBuildDirectory() {
 	}
 
 	if len(files) != 1 {
-		fmt.Printf("Expected only 1 file in /tmp/build but found %d: %v\n", len(files), files)
+		Logf("Expected only 1 file in /tmp/build but found %d: %v\n", len(files), files)
 		os.Exit(1)
 	}
 
