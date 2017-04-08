@@ -16,6 +16,7 @@ func main() {
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
 	result, marshalErr := json.Marshal(getVersions(input, svc, &utils.AwsRequestHandler{}))
+	utils.Logln("Result is: ", result)
 	if marshalErr != nil {
 		utils.Logln("Error occured marshalling output: ", marshalErr)
 		os.Exit(1)
