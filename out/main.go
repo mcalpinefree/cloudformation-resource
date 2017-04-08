@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/ci-pipeline/cloudformation-resource/utils"
 )
@@ -192,12 +193,21 @@ func out(input utils.Input, svc utils.AwsCloudformationSvc, reqHandler utils.Req
 			Tags:         cloudformationTags,
 			TemplateBody: aws.String(templateBody),
 		}
-		req, resp := svc.UpdateStackRequest(params)
+		req, _ := svc.UpdateStackRequest(params)
 		err := reqHandler.HandleRequest(req)
 		if err != nil {
-			utils.Logln(err.Error())
+			if awsErr, ok := err.(awserr.Error); ok {
+				if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
+					utils.Logln("No updates to be performed")
+				} else {
+					utils.Logln("An AWS error occured whilst updating stack: ", err)
+					os.Exit(1)
+				}
+			} else {
+				utils.Logln("An error occured whilst updating stack: ", err)
+				os.Exit(1)
+			}
 		}
-		utils.Logln(resp)
 	}
 
 	success, arn, timestamp := waitForStack(reqHandler, svc, input)
