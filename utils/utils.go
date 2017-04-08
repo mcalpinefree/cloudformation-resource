@@ -14,6 +14,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
+type Result struct {
+	Metadata interface{} `json:"metadata"`
+	Version interface{} `json:"version"`
+}
+
 type AwsRequestSender interface {
 	Send() error
 }

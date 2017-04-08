@@ -1,7 +1,14 @@
 package main
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/ci-pipeline/cloudformation-resource/utils"
+)
 
 func main() {
-	fmt.Println("[]")
+	result := utils.Result{Metadata: []string{}}
+	output, _ := json.Marshal(result)
+	fmt.Println(string(output))
 }

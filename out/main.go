@@ -22,8 +22,9 @@ func main() {
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
 	metadata, success := out(input, svc)
-	fmt.Printf("%s", metadata)
-
+	result := utils.Result{Metadata: metadata}
+	output, _ := json.Marshal(result)
+	fmt.Printf("%s", string(output))
 	if !success {
 		os.Exit(1)
 	}
@@ -104,7 +105,7 @@ func waitForStack(svc *cloudformation.CloudFormation, input utils.Input) (succes
 	}
 }
 
-func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata string, success bool) {
+func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata interface{}, success bool) {
 
 	var capabilities []*string
 	capabilities = nil
@@ -214,6 +215,5 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata string
 	result := make(map[string]string)
 	result["arn"] = arn
 	result["timestamp"] = timestamp
-	bytes, _ := json.Marshal(result)
-	return string(bytes), success
+	return result, success
 }
