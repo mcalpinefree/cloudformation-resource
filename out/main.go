@@ -14,7 +14,10 @@ import (
 )
 
 func main() {
+	fmt.Println("Change to build directory")
 	utils.GoToBuildDirectory()
+	cwd, _ := os.Getwd()
+	fmt.Println(cwd)
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
 	metadata, success := out(input, svc, &utils.AwsRequestHandler{})
