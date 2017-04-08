@@ -31,7 +31,7 @@ func (r *AwsRequestHandler) HandleRequest(req AwsRequest) error {
 	var err error
 	for err = req.Send(); err != nil; err = req.Send() {
 		if reqerr, ok := err.(awserr.RequestFailure); ok {
-			if reqerr.Code() == "RequestLimitExceeded" {
+			if reqerr.Code() == "RequestLimitExceeded"  || reqerr.Code() == "Throttling" {
 				time.Sleep(time.Duration(s) * time.Second)
 				s = s * 2
 				continue
