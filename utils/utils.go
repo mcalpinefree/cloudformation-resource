@@ -106,7 +106,7 @@ func GoToBuildDirectory() {
 }
 
 func Logln(message interface{}) {
-	Logf("%v\n", message)
+	Logf("%s\n", message)
 }
 
 func Logf(format string, a ...interface{}) {
