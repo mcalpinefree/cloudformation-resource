@@ -17,6 +17,13 @@ jobs:
     plan:
       - get: cloudformation-resource
         trigger: true
+      - aggregate:
+        - task: build-check
+          file: cloudformation-resource/ci/tasks/build-check.yml
+        - task: build-in
+          file: cloudformation-resource/ci/tasks/build-in.yml
+        - task: build-out
+          file: cloudformation-resource/ci/tasks/build-out.yml
       - put: cloudformation-resource-image
         params:
           build: cloudformation-resource

@@ -1,0 +1,18 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: golang
+    tag: 1.7-wheezy
+
+inputs:
+  - name: cloudformation-resource
+
+outputs:
+  - name: check
+
+run:
+  path: bash
+  args: ["cloudformation-resource/ci/scripts/build.sh", "check"]
