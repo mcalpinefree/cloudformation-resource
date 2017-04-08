@@ -14,10 +14,10 @@ import (
 )
 
 func main() {
-	fmt.Println("Change to build directory")
+	utils.Logln("Change to build directory")
 	utils.GoToBuildDirectory()
 	cwd, _ := os.Getwd()
-	fmt.Println(cwd)
+	utils.Logln(cwd)
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
 	metadata, success := out(input, svc, &utils.AwsRequestHandler{})
@@ -48,7 +48,7 @@ func stackExists(reqHandler utils.RequestHandler, svc utils.AwsCloudformationSvc
 	if err != nil {
 		return false
 	}
-	fmt.Println(resp)
+	utils.Logln(resp)
 
 	return resp.Stacks[0] != nil
 }
@@ -70,7 +70,7 @@ func waitForStack(reqHandler utils.RequestHandler, svc utils.AwsCloudformationSv
 		}
 		stackEvents = resp.StackEvents
 		for j := len(stackEvents) - 1 - pos; j > -1; j-- {
-			fmt.Println(stackEvents[j])
+			utils.Logln(stackEvents[j])
 		}
 		pos = len(stackEvents)
 
@@ -153,18 +153,18 @@ func out(input utils.Input, svc utils.AwsCloudformationSvc, reqHandler utils.Req
 	}
 
 	if input.Params.Delete == true {
-		fmt.Println("Deleting stack")
+		utils.Logln("Deleting stack")
 		params := &cloudformation.DeleteStackInput{
 			StackName: aws.String(input.Source.Name),
 		}
 		req, resp := svc.DeleteStackRequest(params)
 		err := reqHandler.HandleRequest(req)
 		if err != nil {
-			fmt.Println(err.Error())
+			utils.Logln(err.Error())
 		}
-		fmt.Println(resp)
+		utils.Logln(resp)
 	} else if !stackExists(reqHandler, svc, input.Source.Name) {
-		fmt.Println("Creating stack")
+		utils.Logln("Creating stack")
 		params := &cloudformation.CreateStackInput{
 			StackName:    aws.String(input.Source.Name),
 			Capabilities: capabilities,
@@ -175,11 +175,11 @@ func out(input utils.Input, svc utils.AwsCloudformationSvc, reqHandler utils.Req
 		req, resp := svc.CreateStackRequest(params)
 		err := reqHandler.HandleRequest(req)
 		if err != nil {
-			fmt.Println(err.Error())
+			utils.Logln(err.Error())
 		}
-		fmt.Println(resp)
+		utils.Logln(resp)
 	} else {
-		fmt.Println("Updating stack")
+		utils.Logln("Updating stack")
 		params := &cloudformation.UpdateStackInput{
 			StackName:    aws.String(input.Source.Name),
 			Capabilities: capabilities,
@@ -190,9 +190,9 @@ func out(input utils.Input, svc utils.AwsCloudformationSvc, reqHandler utils.Req
 		req, resp := svc.UpdateStackRequest(params)
 		err := reqHandler.HandleRequest(req)
 		if err != nil {
-			fmt.Println(err.Error())
+			utils.Logln(err.Error())
 		}
-		fmt.Println(resp)
+		utils.Logln(resp)
 	}
 
 	success, arn, timestamp := waitForStack(reqHandler, svc, input)
