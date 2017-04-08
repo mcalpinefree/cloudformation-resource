@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -52,12 +53,12 @@ type Input struct {
 		LastUpdatedTime string `json:"LastUpdatedTime"`
 	} `json:"version"`
 	Params struct {
-		Template string `json:"template"`
-		Parameters string `json:"parameters"`
-		Tags string `json:"tags"`
-		Capabilities []string  `json:"capabilities"`
-		Delete bool `json:"delete"`
-		Wait bool `json:"wait"`
+		Template     string   `json:"template"`
+		Parameters   string   `json:"parameters"`
+		Tags         string   `json:"tags"`
+		Capabilities []string `json:"capabilities"`
+		Delete       bool     `json:"delete"`
+		Wait         bool     `json:"wait"`
 	} `json:"params"`
 }
 
@@ -88,4 +89,18 @@ func GetCloudformationService(input Input) AwsCloudformationSvc {
 	sess := session.Must(session.NewSession(awsConfig))
 	svc := cloudformation.New(sess)
 	return svc
+}
+
+func GoToBuildDirectory() {
+	files, err := ioutil.ReadDir("/tmp/build")
+	if err != nil {
+		panic(err)
+	}
+
+	if len(files) != 1 {
+		fmt.Printf("Expected only 1 file in /tmp/build but found %d: %v\n", len(files), files)
+		os.Exit(1)
+	}
+
+	os.Chdir("/tmp/build/" + files[0].Name())
 }

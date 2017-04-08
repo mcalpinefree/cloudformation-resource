@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	utils.GoToBuildDirectory()
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
 	metadata, success := out(input, svc, &utils.AwsRequestHandler{})
