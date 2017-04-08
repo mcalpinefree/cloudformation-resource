@@ -1,6 +1,6 @@
 #!/bin/bash
 BUILD_DIR=$(pwd)
-ARTIFACT=${ARTIFACT}
+ARTIFACT=$1
 mkdir -p /go/src/github.com/ci-pipeline/
 cp -r cloudformation-resource /go/src/github.com/ci-pipeline/
 cd /go/src/github.com/ci-pipeline/${ARTIFACT}
