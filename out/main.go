@@ -91,7 +91,7 @@ func waitForStack(reqHandler utils.RequestHandler, svc utils.AwsCloudformationSv
 			}
 		}
 
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
@@ -150,6 +150,7 @@ func out(input utils.Input, svc utils.AwsCloudformationSvc, reqHandler utils.Req
 	}
 
 	if input.Params.Delete == true {
+		fmt.Println("Deleting stack")
 		params := &cloudformation.DeleteStackInput{
 			StackName: aws.String(input.Source.Name),
 		}
@@ -160,6 +161,7 @@ func out(input utils.Input, svc utils.AwsCloudformationSvc, reqHandler utils.Req
 		}
 		fmt.Println(resp)
 	} else if !stackExists(reqHandler, svc, input.Source.Name) {
+		fmt.Println("Creating stack")
 		params := &cloudformation.CreateStackInput{
 			StackName:    aws.String(input.Source.Name),
 			Capabilities: capabilities,
@@ -174,6 +176,7 @@ func out(input utils.Input, svc utils.AwsCloudformationSvc, reqHandler utils.Req
 		}
 		fmt.Println(resp)
 	} else {
+		fmt.Println("Updating stack")
 		params := &cloudformation.UpdateStackInput{
 			StackName:    aws.String(input.Source.Name),
 			Capabilities: capabilities,
