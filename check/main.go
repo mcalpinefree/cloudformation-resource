@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 
@@ -15,7 +17,8 @@ func main() {
 	svc := utils.GetCloudformationService(input)
 	result, marshalErr := json.Marshal(getVersions(input, svc, &utils.AwsRequestHandler{}))
 	if marshalErr != nil {
-		panic(marshalErr)
+		utils.Logln("Error occured marshalling output: ", marshalErr)
+		os.Exit(1)
 	}
 	fmt.Printf("%s", result)
 }
