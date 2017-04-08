@@ -44,4 +44,5 @@ jobs:
                 ls -lah in
       - put: cloudformation-resource-image
         params:
-          build: cloudformation-resource
+          build: ./
+          dockerfile: cloudformation-resource/Dockerfile
