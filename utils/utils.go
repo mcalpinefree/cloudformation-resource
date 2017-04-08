@@ -12,12 +12,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/concourse/atc"
 )
 
-type Result struct {
-	Metadata []interface{} `json:"metadata"`
-	Version interface{} `json:"version"`
+type VersionResult struct {
+	Version atc.Version `json:"version,omitempty"`
+	Metadata []atc.MetadataField `json:"metadata,omitempty"`
 }
+
 
 type AwsRequestSender interface {
 	Send() error

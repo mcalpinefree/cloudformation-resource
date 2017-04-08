@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/ci-pipeline/cloudformation-resource/utils"
+	"github.com/concourse/atc"
 )
 
 func main() {
@@ -21,10 +22,8 @@ func main() {
 	utils.Logln(cwd)
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
-	outMetadata, success := out(input, svc)
-	metadata := make([]interface{}, 1)
-	metadata[1] = outMetadata
-	result := utils.Result{Metadata: metadata}
+	metadata, success := out(input, svc)
+	result := utils.VersionResult{Metadata: metadata}
 	output, _ := json.Marshal(result)
 	fmt.Printf("%s", string(output))
 	if !success {
@@ -107,7 +106,7 @@ func waitForStack(svc *cloudformation.CloudFormation, input utils.Input) (succes
 	}
 }
 
-func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata interface{}, success bool) {
+func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.MetadataField, success bool) {
 
 	var capabilities []*string
 	capabilities = nil
@@ -214,8 +213,10 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata interf
 	}
 
 	success, arn, timestamp := waitForStack(svc, input)
-	result := make(map[string]string)
-	result["arn"] = arn
-	result["timestamp"] = timestamp
+	result := make([]atc.MetadataField, 2)
+	result[0].Name = "arn"
+	result[0].Value = arn
+	result[1].Name = "timestamp"
+	result[1].Value = timestamp
 	return result, success
 }

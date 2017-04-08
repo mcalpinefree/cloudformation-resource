@@ -8,8 +8,7 @@ import (
 )
 
 func main() {
-	metadata := make([]interface{}, 0)
-	result := utils.Result{Metadata: metadata}
+	result := utils.VersionResult{}
 	output, _ := json.Marshal(result)
 	fmt.Println(string(output))
 }
