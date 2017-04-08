@@ -24,6 +24,24 @@ jobs:
           file: cloudformation-resource/ci/tasks/build-in.yml
         - task: build-out
           file: cloudformation-resource/ci/tasks/build-out.yml
+      - task: check-files
+        config:
+          platform: linux
+          inputs:
+            - name: check
+            - name: in
+            - name: out
+          image_resource:
+            type: docker-image
+            source:
+              repository: alpine
+          run:
+            path: sh
+            args:
+              - -c
+              - |
+                ls -lah
+                ls -lah in
       - put: cloudformation-resource-image
         params:
           build: cloudformation-resource
