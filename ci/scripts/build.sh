@@ -1,4 +1,5 @@
 #!/bin/bash
+export CGO_ENABLED=0
 BUILD_DIR=$(pwd)
 ARTIFACT=$1
 mkdir -p /go/src/github.com/ci-pipeline/
