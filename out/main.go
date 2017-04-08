@@ -99,7 +99,7 @@ func waitForStack(reqHandler utils.RequestHandler, svc utils.AwsCloudformationSv
 			}
 		}
 
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 }
 
