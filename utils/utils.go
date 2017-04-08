@@ -10,33 +10,28 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-type AwsRequest interface {
+type AwsRequestSender interface {
 	Send() error
 }
 
 type RequestHandler interface {
-	HandleRequest(req AwsRequest) error
+	HandleRequest(req AwsRequestSender) error
 }
 
-type AwsRequestHandler struct {
-}
-
-func (r *AwsRequestHandler) HandleRequest(req AwsRequest) error {
+func HandleRequest(req AwsRequestSender) error {
 	s := 1
 	var err error
 	for err = req.Send(); err != nil; err = req.Send() {
 		if reqerr, ok := err.(awserr.RequestFailure); ok {
-			if reqerr.Code() == "RequestLimitExceeded"  || reqerr.Code() == "Throttling" {
+			if reqerr.Code() == "RequestLimitExceeded" || reqerr.Code() == "Throttling" {
 				time.Sleep(time.Duration(s) * time.Second)
 				s = s * 2
 				continue
 			}
-			Logln("HandleRequest error code:", reqerr.Code())
 		}
 		return err
 	}
@@ -76,15 +71,7 @@ func GetInput() Input {
 	return input
 }
 
-type AwsCloudformationSvc interface {
-	DescribeStacksRequest(input *cloudformation.DescribeStacksInput) (req *request.Request, output *cloudformation.DescribeStacksOutput)
-	CreateStackRequest(input *cloudformation.CreateStackInput) (req *request.Request, output *cloudformation.CreateStackOutput)
-	UpdateStackRequest(input *cloudformation.UpdateStackInput) (req *request.Request, output *cloudformation.UpdateStackOutput)
-	DescribeStackEventsRequest(input *cloudformation.DescribeStackEventsInput) (req *request.Request, output *cloudformation.DescribeStackEventsOutput)
-	DeleteStackRequest(input *cloudformation.DeleteStackInput) (req *request.Request, output *cloudformation.DeleteStackOutput)
-}
-
-func GetCloudformationService(input Input) AwsCloudformationSvc {
+func GetCloudformationService(input Input) *cloudformation.CloudFormation {
 	creds := credentials.NewStaticCredentials(input.Source.AwsAccessKeyId, input.Source.AwsSecretAccessKey, "")
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(input.Source.Region)
 	sess := session.Must(session.NewSession(awsConfig))

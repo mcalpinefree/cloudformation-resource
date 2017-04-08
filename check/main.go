@@ -19,23 +19,17 @@ type Version struct {
 func main() {
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
-	result, marshalErr := json.Marshal(getVersions(input, svc, &utils.AwsRequestHandler{}))
+	resp, err := describeStack(input, svc)
+	result, marshalErr := json.Marshal(getVersions(input, resp, err))
 	utils.Logln("Result is: ", result)
 	if marshalErr != nil {
 		utils.Logln("Error occured marshalling output: ", marshalErr)
 		os.Exit(1)
 	}
-	fmt.Printf("%s", result)
+	fmt.Printf("%s\n", result)
 }
 
-func getVersions(input utils.Input, svc utils.AwsCloudformationSvc, requestHandler utils.RequestHandler) []Version {
-	params := &cloudformation.DescribeStacksInput{
-		StackName: aws.String(input.Source.Name),
-	}
-	req, resp := svc.DescribeStacksRequest(params)
-
-	err := requestHandler.HandleRequest(req)
-
+func getVersions(input utils.Input, resp *cloudformation.DescribeStacksOutput, err error) []Version {
 	// Stack does not exists, return empty list
 	if err != nil {
 		return []Version{}
@@ -55,7 +49,7 @@ func getVersions(input utils.Input, svc utils.AwsCloudformationSvc, requestHandl
 	// Same as current version
 	if input.Version.LastUpdatedTime == newVersion {
 		result := []Version{}
-		result = append(result, Version{LastUpdatedTime: "nil"})
+		result = append(result, Version{LastUpdatedTime: newVersion})
 		return result
 	}
 
@@ -64,4 +58,15 @@ func getVersions(input utils.Input, svc utils.AwsCloudformationSvc, requestHandl
 	result = append(result, Version{LastUpdatedTime: input.Version.LastUpdatedTime})
 	result = append(result, Version{LastUpdatedTime: newVersion})
 	return result
+}
+
+func describeStack(input utils.Input, svc *cloudformation.CloudFormation) (*cloudformation.DescribeStacksOutput, error) {
+	params := &cloudformation.DescribeStacksInput{
+		StackName: aws.String(input.Source.Name),
+	}
+	req, resp := svc.DescribeStacksRequest(params)
+
+	err := utils.HandleRequest(req)
+
+	return resp, err
 }
