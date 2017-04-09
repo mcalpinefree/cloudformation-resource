@@ -131,7 +131,11 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 		bytes, err := ioutil.ReadFile(input.Params.Parameters)
 		err = json.Unmarshal(bytes, &parameters)
 		if err != nil {
-			panic(err)
+			utils.Logln("Could not unmarshal parameters file, path = ", input.Params.Parameters)
+			utils.Logln("contents:")
+			utils.Logln(string(bytes))
+			utils.Logln("error: ", err)
+			os.Exit(1)
 		}
 	}
 	for _, p := range parameters {
