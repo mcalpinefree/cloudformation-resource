@@ -1,6 +1,17 @@
 # CloudFormation Resource
 
-Controls the deployment of CloudFormation stacks.
+This is a Concourse CI resource that controls the deployment of CloudFormation
+stacks.
+
+# Resource type
+You need to add this as a resource type to use it in your pipeline.
+```yaml
+resource_types:
+- name: cloudformation-resource
+  type: docker-image
+  source:
+    repository: pipelineci/cloudformation-resource
+```
 
 ## Source Configuration
 
@@ -20,8 +31,7 @@ Resource configuration for a CloudFormation stack:
 resources:
 - name: my-stack
   type: cloudformation
-  source:
-    name: my-stack
+  source: name: my-stack
     aws_access_key_id: AUDFDQ7CA7JO6U56EQFW
     aws_secret_access_key: VY1SazRkI8M1JEIIUnwmxzMhfjaIzZABNVcqanj8
     region: ap-southeast-2
@@ -67,10 +77,9 @@ jobs:
 
 If a stack is updated or created this resource is triggered.
 
-### `in`: Get stack outputs or stack ARN.
+### `in`: Not implemented
 
-* /arn.txt - The stack ARN
-* /outputs.json - JSON of stack outputs
+There is no in behaviour implemented.
 
 ### `out`: Modify stack.
 
@@ -85,4 +94,3 @@ Create, update or delete the stack.
 * `delete`: *Optional.* Set to `true` to delete the stack.
 * `wait`: *Optional.* Defaults to true. If false is set it will update/create
   the stack and not wait for it to complete.
-
