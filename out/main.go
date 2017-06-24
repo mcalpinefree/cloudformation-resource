@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -22,8 +24,8 @@ func main() {
 	utils.Logln(cwd)
 	input := utils.GetInput()
 	svc := utils.GetCloudformationService(input)
-	metadata, success := out(input, svc)
-	result := utils.VersionResult{Metadata: metadata}
+	metadata, success, version := out(input, svc)
+	result := utils.VersionResult{Metadata: metadata, Version: atc.Version{"sha1": version}}
 	output, _ := json.Marshal(result)
 	fmt.Printf("%s", string(output))
 	if !success {
@@ -106,7 +108,7 @@ func waitForStack(svc *cloudformation.CloudFormation, input utils.Input) (succes
 	}
 }
 
-func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.MetadataField, success bool) {
+func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.MetadataField, success bool, sha string) {
 
 	var capabilities []*string
 	capabilities = nil
@@ -222,5 +224,10 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 	result[0].Value = arn
 	result[1].Name = "timestamp"
 	result[1].Value = timestamp
-	return result, success
+
+	// SHA1 template, parameters and tags and use as version
+	hasher := sha1.New()
+	hasher.Write([]byte(fmt.Sprintf("%s%v%v", templateBody, parameters, tags)))
+	sha = base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+	return result, success, sha
 }
