@@ -176,39 +176,79 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 		utils.Logln(resp)
 	} else if !stackExists(svc, input.Source.Name) {
 		utils.Logln("Creating stack")
-		params := &cloudformation.CreateStackInput{
-			StackName:    aws.String(input.Source.Name),
-			Capabilities: capabilities,
-			Parameters:   cloudformationParams,
-			Tags:         cloudformationTags,
-			TemplateBody: aws.String(templateBody),
+		if input.ChangesetCreate() {
+			params := &cloudformation.CreateChangeSetInput{
+				Capabilities:  capabilities,
+				ChangeSetName: aws.String("concourse-" + time.Now().Format("20060102150405")),
+				ChangeSetType: aws.String(cloudformation.ChangeSetTypeCreate),
+				Description:   aws.String("Changeset created by concourse"),
+				Parameters:    cloudformationParams,
+				StackName:     aws.String(input.Source.Name),
+				Tags:          cloudformationTags,
+				TemplateBody:  aws.String(templateBody),
+			}
+			resp, err := svc.CreateChangeSet(params)
+			if err != nil {
+				utils.Logln(err.Error())
+			}
+			utils.Logln(resp)
+		} else {
+			params := &cloudformation.CreateStackInput{
+				StackName:    aws.String(input.Source.Name),
+				Capabilities: capabilities,
+				Parameters:   cloudformationParams,
+				Tags:         cloudformationTags,
+				TemplateBody: aws.String(templateBody),
+			}
+			resp, err := svc.CreateStack(params)
+			if err != nil {
+				utils.Logln(err.Error())
+			}
+			utils.Logln(resp)
 		}
-		resp, err := svc.CreateStack(params)
-		if err != nil {
-			utils.Logln(err.Error())
-		}
-		utils.Logln(resp)
 	} else {
 		utils.Logln("Updating stack")
-		params := &cloudformation.UpdateStackInput{
-			StackName:    aws.String(input.Source.Name),
-			Capabilities: capabilities,
-			Parameters:   cloudformationParams,
-			Tags:         cloudformationTags,
-			TemplateBody: aws.String(templateBody),
-		}
-		_, err := svc.UpdateStack(params)
-		if err != nil {
-			if awsErr, ok := err.(awserr.Error); ok {
-				if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
-					utils.Logln("No updates to be performed")
+		if input.ChangesetExecute() {
+			changeSets, err := svc.ListChangeSets(&cloudformation.ListChangeSetsInput{
+				StackName: aws.String(input.Source.Name),
+			})
+			if err != nil {
+				utils.Logln(err.Error())
+			}
+			if len(changeSets.Summaries) != 1 {
+				utils.Logln("There must only be 1 changeset associated with a stack to execute")
+				os.Exit(1)
+			}
+
+			resp, err := svc.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+				StackName:     aws.String(input.Source.Name),
+				ChangeSetName: changeSets.Summaries[0].ChangeSetName,
+			})
+			if err != nil {
+				utils.Logln(err.Error())
+			}
+			utils.Logln(resp)
+		} else {
+			params := &cloudformation.UpdateStackInput{
+				StackName:    aws.String(input.Source.Name),
+				Capabilities: capabilities,
+				Parameters:   cloudformationParams,
+				Tags:         cloudformationTags,
+				TemplateBody: aws.String(templateBody),
+			}
+			_, err := svc.UpdateStack(params)
+			if err != nil {
+				if awsErr, ok := err.(awserr.Error); ok {
+					if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
+						utils.Logln("No updates to be performed")
+					} else {
+						utils.Logln("An AWS error occured whilst updating stack: ", err)
+						os.Exit(1)
+					}
 				} else {
-					utils.Logln("An AWS error occured whilst updating stack: ", err)
+					utils.Logln("An error occured whilst updating stack: ", err)
 					os.Exit(1)
 				}
-			} else {
-				utils.Logln("An error occured whilst updating stack: ", err)
-				os.Exit(1)
 			}
 		}
 	}

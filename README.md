@@ -97,3 +97,6 @@ Create, update or delete the stack.
 * `delete`: *Optional.* Set to `true` to delete the stack.
 * `wait`: *Optional.* Defaults to true. If false is set it will update/create
   the stack and not wait for it to complete.
+* `changeset`: *Optional.* If set it will apply changeset operations instead of
+  create/update. Takes a list of operations: `create` or `execute` or both i.e.
+  [create, execute].

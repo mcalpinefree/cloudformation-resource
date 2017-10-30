@@ -35,7 +35,26 @@ type Input struct {
 		Capabilities []string `json:"capabilities"`
 		Delete       bool     `json:"delete"`
 		Wait         bool     `json:"wait"`
+		Changeset    []string `json:"changeset,omitempty"`
 	} `json:"params"`
+}
+
+func (i *Input) ChangesetCreate() bool {
+	for _, c := range i.Params.Changeset {
+		if c == "create" {
+			return true
+		}
+	}
+	return false
+}
+
+func (i *Input) ChangesetExecute() bool {
+	for _, c := range i.Params.Changeset {
+		if c == "execute" {
+			return true
+		}
+	}
+	return false
 }
 
 func GetInput() Input {
