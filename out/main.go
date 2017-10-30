@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -42,6 +43,13 @@ type Parameter struct {
 type Tag struct {
 	TagKey   string
 	TagValue string
+}
+
+type ApiInputs struct {
+	Capabilities         []*string
+	CloudformationParams []*cloudformation.Parameter
+	TemplateBody         string
+	CloudformationTags   []*cloudformation.Tag
 }
 
 func stackExists(svc *cloudformation.CloudFormation, stackName string) bool {
@@ -106,27 +114,124 @@ func waitForStack(svc *cloudformation.CloudFormation, input utils.Input) (succes
 	}
 }
 
+func createChangeSet(input utils.Input, svc *cloudformation.CloudFormation, apiInputs ApiInputs) error {
+	var changeSetType string
+	if stackExists(svc, input.Source.Name) {
+		changeSetType = cloudformation.ChangeSetTypeUpdate
+	} else {
+		changeSetType = cloudformation.ChangeSetTypeCreate
+	}
+	resp, err := svc.CreateChangeSet(&cloudformation.CreateChangeSetInput{
+		Capabilities:  apiInputs.Capabilities,
+		ChangeSetName: aws.String("concourse-" + time.Now().Format("20060102150405")),
+		ChangeSetType: aws.String(changeSetType),
+		Description:   aws.String("Changeset created by concourse"),
+		Parameters:    apiInputs.CloudformationParams,
+		StackName:     aws.String(input.Source.Name),
+		Tags:          apiInputs.CloudformationTags,
+		TemplateBody:  aws.String(apiInputs.TemplateBody),
+	})
+	if err != nil {
+		return err
+	}
+	utils.Logln(resp)
+	return nil
+}
+
+func executeChangeSet(input utils.Input, svc *cloudformation.CloudFormation, apiInputs ApiInputs) error {
+	changeSets, err := svc.ListChangeSets(&cloudformation.ListChangeSetsInput{
+		StackName: aws.String(input.Source.Name),
+	})
+	if err != nil {
+		return err
+	}
+	if len(changeSets.Summaries) != 1 {
+		return errors.New("There must only be 1 changeset associated with a stack to execute")
+	}
+	resp, err := svc.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+		StackName:     aws.String(input.Source.Name),
+		ChangeSetName: changeSets.Summaries[0].ChangeSetName,
+	})
+	if err != nil {
+		return err
+	}
+	utils.Logln(resp)
+	return nil
+}
+
+func createStack(input utils.Input, svc *cloudformation.CloudFormation, apiInputs ApiInputs) error {
+	utils.Logln("Creating stack")
+	params := &cloudformation.CreateStackInput{
+		StackName:    aws.String(input.Source.Name),
+		Capabilities: apiInputs.Capabilities,
+		Parameters:   apiInputs.CloudformationParams,
+		Tags:         apiInputs.CloudformationTags,
+		TemplateBody: aws.String(apiInputs.TemplateBody),
+	}
+	resp, err := svc.CreateStack(params)
+	if err != nil {
+		utils.Logln(err.Error())
+	}
+	utils.Logln(resp)
+	return nil
+}
+
+func updateStack(input utils.Input, svc *cloudformation.CloudFormation, apiInputs ApiInputs) error {
+	utils.Logln("Updating stack")
+	params := &cloudformation.UpdateStackInput{
+		StackName:    aws.String(input.Source.Name),
+		Capabilities: apiInputs.Capabilities,
+		Parameters:   apiInputs.CloudformationParams,
+		Tags:         apiInputs.CloudformationTags,
+		TemplateBody: aws.String(apiInputs.TemplateBody),
+	}
+	_, err := svc.UpdateStack(params)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
+				utils.Logln("No updates to be performed")
+				return nil
+			} else {
+				return errors.New(fmt.Sprintf("An AWS error occured whilst updating stack: %v", err))
+			}
+		} else {
+			return errors.New(fmt.Sprintf("An error occured whilst updating stack: %v", err))
+		}
+	}
+	return nil
+}
+func deleteStack(input utils.Input, svc *cloudformation.CloudFormation, apiInputs ApiInputs) error {
+	utils.Logln("Deleting stack")
+	resp, err := svc.DeleteStack(&cloudformation.DeleteStackInput{
+		StackName: aws.String(input.Source.Name),
+	})
+	if err != nil {
+		return err
+	}
+	utils.Logln(resp)
+	return nil
+}
+
 func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.MetadataField, success bool, sha string) {
 
-	var capabilities []*string
-	capabilities = nil
+	var apiInputs ApiInputs
+
+	apiInputs.Capabilities = nil
 	if input.Params.Capabilities != nil {
 		for _, c := range input.Params.Capabilities {
-			capabilities = append(capabilities, aws.String(c))
+			apiInputs.Capabilities = append(apiInputs.Capabilities, aws.String(c))
 		}
 	}
 
-	var templateBody string
 	if input.Params.Template != "" {
 		bytes, err := ioutil.ReadFile(input.Params.Template)
 		if err != nil {
 			panic(err)
 		}
-		templateBody = string(bytes)
+		apiInputs.TemplateBody = string(bytes)
 	}
 
 	parameters := []Parameter{}
-	var cloudformationParams []*cloudformation.Parameter
 	if input.Params.Parameters != "" {
 		bytes, err := ioutil.ReadFile(input.Params.Parameters)
 		err = json.Unmarshal(bytes, &parameters)
@@ -144,11 +249,10 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 			ParameterValue:   aws.String(p.ParameterValue),
 			UsePreviousValue: aws.Bool(p.UsePreviousValue),
 		}
-		cloudformationParams = append(cloudformationParams, &param)
+		apiInputs.CloudformationParams = append(apiInputs.CloudformationParams, &param)
 	}
 
 	tags := []Tag{}
-	var cloudformationTags []*cloudformation.Tag
 	if input.Params.Tags != "" {
 		bytes, err := ioutil.ReadFile(input.Params.Tags)
 		err = json.Unmarshal(bytes, &tags)
@@ -161,94 +265,37 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 			Key:   aws.String(t.TagKey),
 			Value: aws.String(t.TagValue),
 		}
-		cloudformationTags = append(cloudformationTags, &tag)
+		apiInputs.CloudformationTags = append(apiInputs.CloudformationTags, &tag)
 	}
 
 	if input.Params.Delete == true {
-		utils.Logln("Deleting stack")
-		params := &cloudformation.DeleteStackInput{
-			StackName: aws.String(input.Source.Name),
-		}
-		resp, err := svc.DeleteStack(params)
+		err := deleteStack(input, svc, apiInputs)
 		if err != nil {
-			utils.Logln(err.Error())
+			utils.Logln("Could not delete stack: ", err)
 		}
-		utils.Logln(resp)
-	} else if !stackExists(svc, input.Source.Name) {
-		utils.Logln("Creating stack")
+	} else if input.ChangesetCreate() || input.ChangesetExecute() {
 		if input.ChangesetCreate() {
-			params := &cloudformation.CreateChangeSetInput{
-				Capabilities:  capabilities,
-				ChangeSetName: aws.String("concourse-" + time.Now().Format("20060102150405")),
-				ChangeSetType: aws.String(cloudformation.ChangeSetTypeCreate),
-				Description:   aws.String("Changeset created by concourse"),
-				Parameters:    cloudformationParams,
-				StackName:     aws.String(input.Source.Name),
-				Tags:          cloudformationTags,
-				TemplateBody:  aws.String(templateBody),
-			}
-			resp, err := svc.CreateChangeSet(params)
+			err := createChangeSet(input, svc, apiInputs)
 			if err != nil {
-				utils.Logln(err.Error())
+				utils.Logln("Could not create Change Set: ", err)
 			}
-			utils.Logln(resp)
-		} else {
-			params := &cloudformation.CreateStackInput{
-				StackName:    aws.String(input.Source.Name),
-				Capabilities: capabilities,
-				Parameters:   cloudformationParams,
-				Tags:         cloudformationTags,
-				TemplateBody: aws.String(templateBody),
-			}
-			resp, err := svc.CreateStack(params)
+		}
+		if input.ChangesetExecute() {
+			err := executeChangeSet(input, svc, apiInputs)
 			if err != nil {
-				utils.Logln(err.Error())
+				utils.Logln("Could not execute Change Set: ", err)
 			}
-			utils.Logln(resp)
 		}
 	} else {
-		utils.Logln("Updating stack")
-		if input.ChangesetExecute() {
-			changeSets, err := svc.ListChangeSets(&cloudformation.ListChangeSetsInput{
-				StackName: aws.String(input.Source.Name),
-			})
+		if !stackExists(svc, input.Source.Name) {
+			err := createStack(input, svc, apiInputs)
 			if err != nil {
-				utils.Logln(err.Error())
+				utils.Logln("Could not create stack: ", err)
 			}
-			if len(changeSets.Summaries) != 1 {
-				utils.Logln("There must only be 1 changeset associated with a stack to execute")
-				os.Exit(1)
-			}
-
-			resp, err := svc.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
-				StackName:     aws.String(input.Source.Name),
-				ChangeSetName: changeSets.Summaries[0].ChangeSetName,
-			})
-			if err != nil {
-				utils.Logln(err.Error())
-			}
-			utils.Logln(resp)
 		} else {
-			params := &cloudformation.UpdateStackInput{
-				StackName:    aws.String(input.Source.Name),
-				Capabilities: capabilities,
-				Parameters:   cloudformationParams,
-				Tags:         cloudformationTags,
-				TemplateBody: aws.String(templateBody),
-			}
-			_, err := svc.UpdateStack(params)
+			err := updateStack(input, svc, apiInputs)
 			if err != nil {
-				if awsErr, ok := err.(awserr.Error); ok {
-					if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
-						utils.Logln("No updates to be performed")
-					} else {
-						utils.Logln("An AWS error occured whilst updating stack: ", err)
-						os.Exit(1)
-					}
-				} else {
-					utils.Logln("An error occured whilst updating stack: ", err)
-					os.Exit(1)
-				}
+				utils.Logln("Could not update stack: ", err)
 			}
 		}
 	}
@@ -262,7 +309,7 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 
 	// SHA1 template, parameters and tags and use as version
 	hasher := sha1.New()
-	hasher.Write([]byte(fmt.Sprintf("%s%v%v", templateBody, parameters, tags)))
+	hasher.Write([]byte(fmt.Sprintf("%s%v%v", apiInputs.TemplateBody, parameters, tags)))
 	sha = base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 	return result, success, sha
 }
