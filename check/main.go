@@ -64,9 +64,7 @@ func describeStack(input utils.Input, svc *cloudformation.CloudFormation) (*clou
 	params := &cloudformation.DescribeStacksInput{
 		StackName: aws.String(input.Source.Name),
 	}
-	req, resp := svc.DescribeStacksRequest(params)
-
-	err := utils.HandleRequest(req)
+	resp, err := svc.DescribeStacks(params)
 
 	return resp, err
 }

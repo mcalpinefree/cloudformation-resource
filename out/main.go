@@ -48,8 +48,7 @@ func stackExists(svc *cloudformation.CloudFormation, stackName string) bool {
 	params := &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	}
-	req, resp := svc.DescribeStacksRequest(params)
-	err := utils.HandleRequest(req)
+	resp, err := svc.DescribeStacks(params)
 	if err != nil {
 		return false
 	}
@@ -67,8 +66,7 @@ func waitForStack(svc *cloudformation.CloudFormation, input utils.Input) (succes
 	pos := 0
 	var stackEvents []*cloudformation.StackEvent
 	for {
-		req, resp := svc.DescribeStackEventsRequest(params)
-		err := utils.HandleRequest(req)
+		resp, err := svc.DescribeStackEvents(params)
 		if err != nil {
 			if input.Params.Delete {
 				success = true
@@ -171,8 +169,7 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 		params := &cloudformation.DeleteStackInput{
 			StackName: aws.String(input.Source.Name),
 		}
-		req, resp := svc.DeleteStackRequest(params)
-		err := utils.HandleRequest(req)
+		resp, err := svc.DeleteStack(params)
 		if err != nil {
 			utils.Logln(err.Error())
 		}
@@ -186,8 +183,7 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 			Tags:         cloudformationTags,
 			TemplateBody: aws.String(templateBody),
 		}
-		req, resp := svc.CreateStackRequest(params)
-		err := utils.HandleRequest(req)
+		resp, err := svc.CreateStack(params)
 		if err != nil {
 			utils.Logln(err.Error())
 		}
@@ -201,8 +197,7 @@ func out(input utils.Input, svc *cloudformation.CloudFormation) (metadata []atc.
 			Tags:         cloudformationTags,
 			TemplateBody: aws.String(templateBody),
 		}
-		req, _ := svc.UpdateStackRequest(params)
-		err := utils.HandleRequest(req)
+		_, err := svc.UpdateStack(params)
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok {
 				if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {

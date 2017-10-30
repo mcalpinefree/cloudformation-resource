@@ -23,6 +23,9 @@ resource_types:
 
 * `region`: *Required.*
 
+`aws_access_key_id` and `aws_secret_access_key` may be omitted if the EC2
+instance has an IAM role with the correct permissions.
+
 ### Example
 
 Resource configuration for a CloudFormation stack:
