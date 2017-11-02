@@ -115,15 +115,20 @@ func waitForStack(svc *cloudformation.CloudFormation, input utils.Input) (succes
 }
 
 func createChangeSet(input utils.Input, svc *cloudformation.CloudFormation, apiInputs ApiInputs) error {
+	utils.Logln("Create Change Set")
 	var changeSetType string
 	if stackExists(svc, input.Source.Name) {
+		utils.Logln("ChangeSetTypeUpdate")
 		changeSetType = cloudformation.ChangeSetTypeUpdate
 	} else {
+		utils.Logln("ChangeSetTypeCreate")
 		changeSetType = cloudformation.ChangeSetTypeCreate
 	}
+	changeSetName := "concourse-" + time.Now().Format("20060102150405")
+	utils.Logln("Change Set Name: " + changeSetName)
 	resp, err := svc.CreateChangeSet(&cloudformation.CreateChangeSetInput{
 		Capabilities:  apiInputs.Capabilities,
-		ChangeSetName: aws.String("concourse-" + time.Now().Format("20060102150405")),
+		ChangeSetName: aws.String(changeSetName),
 		ChangeSetType: aws.String(changeSetType),
 		Description:   aws.String("Changeset created by concourse"),
 		Parameters:    apiInputs.CloudformationParams,
@@ -132,9 +137,44 @@ func createChangeSet(input utils.Input, svc *cloudformation.CloudFormation, apiI
 		TemplateBody:  aws.String(apiInputs.TemplateBody),
 	})
 	if err != nil {
+		utils.Logln(fmt.Sprintf("Failed to create change set: %v\n", err))
 		return err
 	}
 	utils.Logln(resp)
+
+	describeChangeSetInput := &cloudformation.DescribeChangeSetInput{
+		ChangeSetName: aws.String(changeSetName),
+		StackName:     aws.String(input.Source.Name),
+	}
+	err = svc.WaitUntilChangeSetCreateComplete(describeChangeSetInput)
+	if err != nil {
+		utils.Logln("Failed to wait for change set create to complete")
+		if awsErr, ok := err.(awserr.Error); ok {
+			utils.Logln(awsErr.Code())
+			utils.Logln(awsErr.Error())
+			utils.Logln(awsErr.Message())
+			if awsErr.Code() == "ResourceNotReady" {
+				describeChangeSetOutput, err := svc.DescribeChangeSet(describeChangeSetInput)
+				if err != nil {
+					return err
+				}
+
+				if *describeChangeSetOutput.Status == cloudformation.ChangeSetStatusFailed {
+					utils.Logln("Deleting change set because the status is failed")
+					_, err := svc.DeleteChangeSet(&cloudformation.DeleteChangeSetInput{
+						ChangeSetName: aws.String(changeSetName),
+						StackName:     aws.String(input.Source.Name),
+					})
+					if err != nil {
+						utils.Logln("Failed to delete change set")
+						return err
+					}
+				}
+			}
+		}
+		return err
+	}
+
 	return nil
 }
 
